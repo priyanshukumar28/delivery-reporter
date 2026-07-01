@@ -317,7 +317,7 @@ function renderDailyLedger(data) {
   const statGap = 16;
   const statW = (contentW - statGap * 4) / 5;
 
-  const rowH = 66;
+  const rowH = 80;
   const EMPTY_PANEL_H = 300;
   const panel1Y = statY + statH + gap;
   const panel1H = Math.max(EMPTY_PANEL_H, 118 + Math.max(data.requirements.length, data.deliveries.length, 1) * rowH);
@@ -414,21 +414,23 @@ function renderDailyLedger(data) {
       return;
     }
 
-    let y = panel1Y + 76 + 30;
+    let y = panel1Y + 76 + 26;
     items.forEach((item, index) => {
-      text(ctx, String(index + 1).padStart(2, "0"), x + 24, y + 6, { size: 12, weight: 700, color: COLOR.muted, font: "monospace" });
+      const rowTop = y;
       const tagInfo = renderTagFn(item);
-      const tagW = pill(ctx, tagInfo.label, x + 54, y - 15, tagInfo.color);
-      text(ctx, item.module, x + 54 + tagW + 10, y, { size: 13, weight: 700, color: COLOR.ink });
+      const tagW = pill(ctx, tagInfo.label, x + 54, rowTop, tagInfo.color);
+      const lineBaseline = rowTop + 14.5;
+      text(ctx, String(index + 1).padStart(2, "0"), x + 24, lineBaseline, { size: 12, weight: 700, color: COLOR.muted, font: "monospace" });
+      text(ctx, item.module, x + 54 + tagW + 10, lineBaseline, { size: 13, weight: 700, color: COLOR.ink });
       const lines = wrapLines(ctx, item.description, panelW - 48, 14, 600, "sans-serif");
-      text(ctx, lines[0] || "", x + 24, y + 24, { size: 14, weight: 600, color: COLOR.ink });
+      text(ctx, lines[0] || "", x + 24, rowTop + 42, { size: 14, weight: 600, color: COLOR.ink });
       const meta = item.requestedBy ? `Requested by ${item.requestedBy}` : item.remarks ? item.remarks : "";
-      if (meta) text(ctx, meta, x + 24, y + 44, { size: 12, weight: 500, color: COLOR.muted });
+      if (meta) text(ctx, meta, x + 24, rowTop + 62, { size: 12, weight: 500, color: COLOR.muted });
       if (index < items.length - 1) {
         ctx.strokeStyle = COLOR.line;
         ctx.beginPath();
-        ctx.moveTo(x + 24, y + rowH - 14);
-        ctx.lineTo(x + panelW - 24, y + rowH - 14);
+        ctx.moveTo(x + 24, rowTop + rowH - 12);
+        ctx.lineTo(x + panelW - 24, rowTop + rowH - 12);
         ctx.stroke();
       }
       y += rowH;
