@@ -3,7 +3,7 @@ import styles from "../styles/dashboard.module.css";
 import { buildMessageText } from "../utils/message.js";
 import { CopyIcon, DownloadIcon, PrintIcon, TrashIcon } from "./icons.jsx";
 
-export default function ExportPanel({ date, requirements, deliveries, report, generating, onGenerate, onClearToday }) {
+export default function ExportPanel({ date, requirements, deliveries, generating, onGenerate, onClearToday }) {
   const [copied, setCopied] = useState("");
 
   async function copy(mode) {
@@ -25,7 +25,7 @@ export default function ExportPanel({ date, requirements, deliveries, report, ge
   }
 
   async function downloadPng() {
-    const current = report || (await onGenerate());
+    const current = await onGenerate();
     if (current?.imageUrl) window.open(current.imageUrl, "_blank");
   }
 

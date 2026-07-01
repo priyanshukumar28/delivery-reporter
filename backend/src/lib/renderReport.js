@@ -541,8 +541,10 @@ function renderDailyLedger(data) {
   const rightIconX = dividerX + 46;
   circleBadge(ctx, rightIconX, footerY + footerH / 2, 22, COLOR.blueSoft);
   drawClockIcon(ctx, rightIconX, footerY + footerH / 2, 22, COLOR.blue, 2.6);
+  // Prefer the caller's own local-time label (the server's clock/timezone isn't the analyst's).
   const now = new Date();
-  const stamp = `${now.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })} | ${now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true })}`;
+  const stamp = data.generatedAtLabel
+    || `${now.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })} | ${now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true })}`;
   text(ctx, "Report Generated On", rightIconX + 36, footerY + footerH / 2 - 6, { size: 13, weight: 500, color: COLOR.muted });
   text(ctx, stamp, rightIconX + 36, footerY + footerH / 2 + 16, { size: 15, weight: 800, color: COLOR.ink });
 

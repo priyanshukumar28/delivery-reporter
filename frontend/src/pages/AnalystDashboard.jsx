@@ -25,21 +25,18 @@ export default function AnalystDashboard() {
   const [date, setDate] = useState(todayKey());
   const [requirements, setRequirements] = useState([]);
   const [deliveries, setDeliveries] = useState([]);
-  const [report, setReport] = useState(null);
   const [history, setHistory] = useState([]);
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
 
   const load = useCallback(async () => {
-    const [reqRes, delRes, reportRes] = await Promise.all([
+    const [reqRes, delRes] = await Promise.all([
       api.get("/requirements", { params: { date } }),
-      api.get("/deliveries", { params: { date } }),
-      api.get("/reports", { params: { date } })
+      api.get("/deliveries", { params: { date } })
     ]);
     setRequirements(reqRes.data);
     setDeliveries(delRes.data);
-    setReport(reportRes.data);
   }, [date]);
 
   const loadHistory = useCallback(async () => {
@@ -95,8 +92,9 @@ export default function AnalystDashboard() {
   async function generateReport() {
     setGenerating(true);
     try {
-      const { data } = await api.post("/reports/generate", { date });
-      setReport(data);
+      const now = new Date();
+      const generatedAtLabel = `${now.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })} | ${now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true })}`;
+      const { data } = await api.post("/reports/generate", { date, generatedAtLabel });
       loadHistory();
       return data;
     } finally {
@@ -185,7 +183,6 @@ export default function AnalystDashboard() {
           date={date}
           requirements={requirements}
           deliveries={deliveries}
-          report={report}
           generating={generating}
           onGenerate={generateReport}
           onClearToday={clearToday}

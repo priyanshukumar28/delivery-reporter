@@ -77,6 +77,7 @@ function buildMessage({ date, requirements, deliveries }, mode = "whatsapp") {
 router.post("/generate", requireRole("ANALYST", "SUPER_ADMIN"), async (req, res) => {
   const lobId = resolveLobId(req);
   const date = req.body.date;
+  const generatedAtLabel = req.body.generatedAtLabel;
   if (!lobId || !date) return res.status(400).json({ error: "lobId and date are required." });
 
   const lob = await prisma.lOB.findUnique({ where: { id: lobId } });
@@ -87,7 +88,7 @@ router.post("/generate", requireRole("ANALYST", "SUPER_ADMIN"), async (req, res)
     prisma.delivery.findMany({ where: { lobId, date }, orderBy: { createdAt: "asc" } })
   ]);
 
-  const canvas = renderDailyLedger({ lobName: lob.name, date, requirements, deliveries });
+  const canvas = renderDailyLedger({ lobName: lob.name, date, requirements, deliveries, generatedAtLabel });
   const fileName = `${lobId}-${date}.png`;
   const filePath = path.join(UPLOAD_DIR, fileName);
   fs.writeFileSync(filePath, canvas.toBuffer("image/png"));
