@@ -1,0 +1,61 @@
+:root {
+  --ink: #0b1d3a;
+  --ink-deep: #071228;
+  --paper: #f7f5ef;
+  --card: #ffffff;
+  --line: #e4e0d4;
+  --muted: #6b7280;
+  --amber: #c77d00;
+  --amber-soft: #fbf0dd;
+  --teal: #0e7c66;
+  --teal-soft: #e3f4ef;
+  --indigo: #33418f;
+  --indigo-soft: #ebedf9;
+  --crimson: #b23a3a;
+  --crimson-soft: #fbeaea;
+
+  --font-display: "Space Grotesk", "Segoe UI", sans-serif;
+  --font-body: "Inter", "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", "Courier New", monospace;
+
+  --radius: 10px;
+  --shadow: 0 8px 24px rgba(11, 29, 58, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  line-height: 1.5;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  margin: 0;
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+a {
+  color: var(--indigo);
+}

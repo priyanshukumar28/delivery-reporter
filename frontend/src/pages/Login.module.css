@@ -1,0 +1,275 @@
+.page {
+  --blue: #2563eb;
+  --blue-deep: #1d4ed8;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(37, 99, 235, 0.08), transparent 40%),
+    #f8f9fb;
+}
+
+.topbar {
+  background: #fff;
+  border-bottom: 1px solid var(--line);
+  padding: 14px 32px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logoIcon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--blue);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.brandName {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--blue);
+}
+
+.hero {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 64px 24px 48px;
+  text-align: center;
+}
+
+.heroTitle {
+  font-size: 44px;
+  line-height: 1.15;
+  color: var(--ink);
+}
+
+.accent {
+  color: var(--blue);
+}
+
+.heroSubtitle {
+  margin: 16px 0 40px;
+  color: var(--muted);
+  font-size: 16px;
+  max-width: 440px;
+}
+
+.card {
+  width: min(420px, 100%);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 40px 36px 28px;
+  text-align: center;
+}
+
+.cardIcon {
+  width: 52px;
+  height: 52px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  background: var(--blue);
+  display: grid;
+  place-items: center;
+}
+
+.cardTitle {
+  font-size: 22px;
+}
+
+.cardSubtitle {
+  margin: 6px 0 28px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.card form {
+  text-align: left;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.field label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.inputWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.inputIcon {
+  position: absolute;
+  left: 12px;
+  display: flex;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.inputWrap input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 11px 12px 11px 36px;
+  font: inherit;
+  outline: none;
+}
+
+.inputWrap input:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.eyeToggle {
+  position: absolute;
+  right: 10px;
+  border: 0;
+  background: none;
+  padding: 4px;
+  display: flex;
+  color: var(--muted);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 4px 0 20px;
+  font-size: 13px;
+}
+
+.remember {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.remember input {
+  accent-color: var(--blue);
+}
+
+.link {
+  color: var(--blue);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+.submit {
+  width: 100%;
+  border: 0;
+  border-radius: 8px;
+  padding: 13px;
+  font-weight: 700;
+  font-size: 15px;
+  background: var(--blue);
+  color: #fff;
+}
+
+.submit:hover {
+  background: var(--blue-deep);
+}
+
+.error {
+  color: var(--crimson);
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.cardFooter {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.badges {
+  margin-top: 10px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.trusted {
+  margin-top: 40px;
+}
+
+.trustedLabel {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-bottom: 14px;
+}
+
+.trustedIcons {
+  display: flex;
+  gap: 24px;
+  justify-content: center;
+}
+
+.trustedIcon {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--line);
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 32px;
+  border-top: 1px solid var(--line);
+  background: #fff;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.footerLinks {
+  display: flex;
+  gap: 24px;
+}
+
+.footerLinks a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.footerLinks a:hover {
+  color: var(--ink);
+}
+
+@media (max-width: 520px) {
+  .heroTitle {
+    font-size: 32px;
+  }
+  .footer {
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
+  }
+}

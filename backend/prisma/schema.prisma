@@ -1,0 +1,99 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  ANALYST
+}
+
+enum Priority {
+  Low
+  Medium
+  High
+  Critical
+}
+
+model LOB {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  headName  String?
+  headPhone String? // E.164 format, used to build the wa.me share link
+  createdAt DateTime @default(now())
+
+  users        User[]
+  requirements Requirement[]
+  deliveries   Delivery[]
+  reports      DailyReport[]
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(ANALYST)
+  lobId        String?
+  lob          LOB?     @relation(fields: [lobId], references: [id])
+  createdAt    DateTime @default(now())
+
+  requirements Requirement[]
+  deliveries   Delivery[]
+}
+
+model Requirement {
+  id          String   @id @default(cuid())
+  date        String // YYYY-MM-DD, the business day this entry belongs to
+  description String
+  requestedBy String?
+  priority    Priority @default(Medium)
+  module      String?
+  lobId       String
+  lob         LOB      @relation(fields: [lobId], references: [id])
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@index([lobId, date])
+}
+
+model Delivery {
+  id          String   @id @default(cuid())
+  date        String
+  description String
+  remarks     String?
+  type        String   @default("Feature")
+  module      String?
+  lobId       String
+  lob         LOB      @relation(fields: [lobId], references: [id])
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@index([lobId, date])
+}
+
+// One cached/generated snapshot per LOB per day — regenerated on demand,
+// holds the rendered PNG path and the wa.me share link built from it.
+model DailyReport {
+  id           String   @id @default(cuid())
+  date         String
+  lobId        String
+  lob          LOB      @relation(fields: [lobId], references: [id])
+  imagePath    String
+  imageUrl     String
+  shareLink    String
+  requirements Int
+  deliveries   Int
+  modules      Int
+  bugFixes     Int
+  features     Int
+  generatedAt  DateTime @default(now())
+
+  @@unique([lobId, date])
+}
