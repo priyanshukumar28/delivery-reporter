@@ -4,6 +4,7 @@ const path = require("path");
 const prisma = require("../lib/prisma");
 const { requireAuth, requireRole } = require("../middleware/auth");
 const { renderDailyLedger } = require("../lib/renderReport");
+const { sendReportEmail } = require("../lib/email");
 
 const router = express.Router();
 router.use(requireAuth);
@@ -25,6 +26,11 @@ function buildShareLink(phone, message) {
 function formatDateMessage(dateStr) {
   const d = new Date(`${dateStr}T00:00:00`);
   return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+function currentGeneratedAtLabel() {
+  const now = new Date();
+  return `${now.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })} | ${now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true })}`;
 }
 
 function buildMessage({ date, requirements, deliveries }, mode = "whatsapp") {
@@ -77,7 +83,7 @@ function buildMessage({ date, requirements, deliveries }, mode = "whatsapp") {
 router.post("/generate", requireRole("ANALYST", "SUPER_ADMIN"), async (req, res) => {
   const lobId = resolveLobId(req);
   const date = req.body.date;
-  const generatedAtLabel = req.body.generatedAtLabel;
+  const generatedAtLabel = req.body.generatedAtLabel || currentGeneratedAtLabel();
   if (!lobId || !date) return res.status(400).json({ error: "lobId and date are required." });
 
   const lob = await prisma.lOB.findUnique({ where: { id: lobId } });
@@ -137,6 +143,55 @@ router.delete("/:id", requireRole("ANALYST", "SUPER_ADMIN"), async (req, res) =>
   fs.existsSync(existing.imagePath) && fs.unlinkSync(existing.imagePath);
   await prisma.dailyReport.delete({ where: { id: req.params.id } });
   res.status(204).end();
+});
+
+// Renders the current entries fresh (so the email reflects latest edits),
+// emails the PNG to the LOB Head, and updates the cached DailyReport row.
+router.post("/email", requireRole("ANALYST", "SUPER_ADMIN"), async (req, res) => {
+  const lobId = resolveLobId(req);
+  const date = req.body.date;
+  if (!lobId || !date) return res.status(400).json({ error: "lobId and date are required." });
+
+  const lob = await prisma.lOB.findUnique({ where: { id: lobId } });
+  if (!lob) return res.status(404).json({ error: "LOB not found." });
+
+  const [requirements, deliveries] = await Promise.all([
+    prisma.requirement.findMany({ where: { lobId, date }, orderBy: { createdAt: "asc" } }),
+    prisma.delivery.findMany({ where: { lobId, date }, orderBy: { createdAt: "asc" } })
+  ]);
+
+  const generatedAtLabel = currentGeneratedAtLabel();
+  const canvas = renderDailyLedger({ lobName: lob.name, date, requirements, deliveries, generatedAtLabel });
+  const fileName = `${lobId}-${date}.png`;
+  const filePath = path.join(UPLOAD_DIR, fileName);
+  fs.writeFileSync(filePath, canvas.toBuffer("image/png"));
+
+  const imageUrl = `${process.env.PUBLIC_URL}/reports/${fileName}`;
+  const message = buildMessage({ date, requirements, deliveries });
+  const shareLink = buildShareLink(lob.headPhone, `${message}\n${imageUrl}`);
+  const modules = new Set([...requirements, ...deliveries].map(i => i.module).filter(Boolean)).size;
+  const bugFixes = deliveries.filter(d => d.type === "Bug Fix").length;
+  const features = deliveries.filter(d => d.type === "Feature").length;
+
+  try {
+    await sendReportEmail({
+      to: lob.headEmail,
+      subject: `Daily Delivery Update \u2013 ${lob.name} \u2013 ${date}`,
+      textBody: message,
+      pngBuffer: fs.readFileSync(filePath),
+      filename: `daily-delivery-update-${date}.png`
+    });
+  } catch (err) {
+    return res.status(502).json({ error: err.message });
+  }
+
+  await prisma.dailyReport.upsert({
+    where: { lobId_date: { lobId, date } },
+    update: { imagePath: filePath, imageUrl, shareLink, requirements: requirements.length, deliveries: deliveries.length, modules, bugFixes, features, generatedAt: new Date() },
+    create: { lobId, date, imagePath: filePath, imageUrl, shareLink, requirements: requirements.length, deliveries: deliveries.length, modules, bugFixes, features }
+  });
+
+  res.json({ sent: true, to: lob.headEmail });
 });
 
 module.exports = router;

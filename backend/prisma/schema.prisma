@@ -23,6 +23,7 @@ model LOB {
   id        String   @id @default(cuid())
   name      String   @unique
   headName  String?
+  headEmail String?
   headPhone String? // E.164 format, used to build the wa.me share link
   createdAt DateTime @default(now())
 

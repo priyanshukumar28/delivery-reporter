@@ -8,6 +8,10 @@ const lobRoutes = require("./routes/lob");
 const entryRoutes = require("./routes/entries");
 const reportRoutes = require("./routes/reports");
 
+process.on("unhandledRejection", err => {
+  console.error("Unhandled rejection:", err);
+});
+
 const app = express();
 
 app.use(cors({ origin: process.env.CORS_ORIGIN || "*" }));

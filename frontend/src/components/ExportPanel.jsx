@@ -1,10 +1,21 @@
 import { useState } from "react";
+import api from "../api/client";
 import styles from "../styles/dashboard.module.css";
 import { buildMessageText } from "../utils/message.js";
 import { CopyIcon, DownloadIcon, PrintIcon, TrashIcon } from "./icons.jsx";
 
+function MailIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="4" width="20" height="16" rx="2" />
+      <path d="m22 7-10 5L2 7" />
+    </svg>
+  );
+}
+
 export default function ExportPanel({ date, requirements, deliveries, generating, onGenerate, onClearToday }) {
   const [copied, setCopied] = useState("");
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   async function copy(mode) {
     const text = buildMessageText({ date, requirements, deliveries }, mode);
@@ -38,6 +49,18 @@ export default function ExportPanel({ date, requirements, deliveries, generating
     await onClearToday();
   }
 
+  async function emailToHead() {
+    setSendingEmail(true);
+    try {
+      const { data } = await api.post("/reports/email", { date });
+      window.alert(`Report emailed to ${data.to}.`);
+    } catch (err) {
+      window.alert(err.response?.data?.error || "Failed to send email.");
+    } finally {
+      setSendingEmail(false);
+    }
+  }
+
   return (
     <div className={styles.panel}>
       <div className={styles.panelHeadRow}>
@@ -58,6 +81,9 @@ export default function ExportPanel({ date, requirements, deliveries, generating
         </button>
         <button className={styles.exportGhost} onClick={print}>
           <PrintIcon /> Print
+        </button>
+        <button className={styles.exportPrimary} onClick={emailToHead} disabled={sendingEmail}>
+          <MailIcon /> {sendingEmail ? "Sending..." : "Email to LOB Head"}
         </button>
         <button className={styles.exportDanger} onClick={clearToday}>
           <TrashIcon /> Clear Today&apos;s Data

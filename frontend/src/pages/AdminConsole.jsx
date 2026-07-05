@@ -6,7 +6,7 @@ import styles from "../styles/dashboard.module.css";
 export default function AdminConsole() {
   const [lobs, setLobs] = useState([]);
   const [users, setUsers] = useState([]);
-  const [lobForm, setLobForm] = useState({ name: "", headName: "", headPhone: "" });
+  const [lobForm, setLobForm] = useState({ name: "", headName: "", headPhone: "", headEmail: "" });
   const [userForm, setUserForm] = useState({ name: "", email: "", password: "", role: "ANALYST", lobId: "" });
 
   const load = useCallback(async () => {
@@ -22,7 +22,7 @@ export default function AdminConsole() {
   async function createLob(e) {
     e.preventDefault();
     await api.post("/lobs", lobForm);
-    setLobForm({ name: "", headName: "", headPhone: "" });
+    setLobForm({ name: "", headName: "", headPhone: "", headEmail: "" });
     load();
   }
 
@@ -46,6 +46,7 @@ export default function AdminConsole() {
               <input placeholder="LOB name" value={lobForm.name} onChange={e => setLobForm({ ...lobForm, name: e.target.value })} required />
               <input placeholder="Head name" value={lobForm.headName} onChange={e => setLobForm({ ...lobForm, headName: e.target.value })} />
               <input placeholder="Head WhatsApp number (E.164, e.g. 919999999999)" value={lobForm.headPhone} onChange={e => setLobForm({ ...lobForm, headPhone: e.target.value })} />
+              <input placeholder="Head email (for daily report email)" type="email" value={lobForm.headEmail} onChange={e => setLobForm({ ...lobForm, headEmail: e.target.value })} />
               <button className={styles.addBtn} type="submit">Add LOB</button>
             </form>
             <div className={styles.rows}>
