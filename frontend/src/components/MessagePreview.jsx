@@ -5,10 +5,11 @@ function formatDateLong(dateStr) {
   return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 }
 
-export default function MessagePreview({ date, requirements, deliveries }) {
+export default function MessagePreview({ date, requirements, deliveries, delays = [] }) {
   const modules = new Set([...requirements, ...deliveries].map(i => i.module).filter(Boolean));
   const bugs = deliveries.filter(d => d.type === "Bug Fix").length;
   const features = deliveries.filter(d => d.type === "Feature").length;
+  const flagged = delays.filter(d => d.status === "Delayed" || d.status === "At Risk").length;
 
   return (
     <div className={styles.panel}>
@@ -44,6 +45,25 @@ export default function MessagePreview({ date, requirements, deliveries }) {
 
         <hr className={styles.msgRule} />
 
+        <p className={styles.msgSection}>⏱ Delivery Timeline &amp; WIP Updates</p>
+        {delays.length ? (
+          <ul className={styles.msgList}>
+            {delays.map(item => (
+              <li key={item.id}>
+                {item.deliverable}{item.module ? ` (${item.module})` : ""} [{item.status}]
+                {(item.originalDueDate || item.revisedDueDate) && (
+                  <> — {item.originalDueDate || "—"} → {item.revisedDueDate || "—"}</>
+                )}
+                {item.reason ? ` — ${item.reason}` : ""}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className={styles.msgEmpty}>No timeline changes or WIP updates logged for this date.</p>
+        )}
+
+        <hr className={styles.msgRule} />
+
         <p className={styles.msgSection}>📊 Summary</p>
         <ul className={styles.msgList}>
           <li>Requirements Received : {requirements.length}</li>
@@ -51,6 +71,7 @@ export default function MessagePreview({ date, requirements, deliveries }) {
           <li>Modules Worked On : {modules.size}</li>
           <li>Bug Fixes : {bugs}</li>
           <li>Features Delivered : {features}</li>
+          <li>Delayed / At Risk Items : {flagged}</li>
         </ul>
       </div>
     </div>

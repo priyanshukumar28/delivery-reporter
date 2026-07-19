@@ -6,6 +6,7 @@ const path = require("path");
 const authRoutes = require("./routes/auth");
 const lobRoutes = require("./routes/lob");
 const entryRoutes = require("./routes/entries");
+const delayRoutes = require("./routes/delays");
 const reportRoutes = require("./routes/reports");
 
 process.on("unhandledRejection", err => {
@@ -24,6 +25,7 @@ app.get("/health", (req, res) => res.json({ ok: true }));
 app.use("/api/auth", authRoutes);
 app.use("/api/lobs", lobRoutes);
 app.use("/api", entryRoutes);
+app.use("/api", delayRoutes);
 app.use("/api/reports", reportRoutes);
 
 app.use((err, req, res, next) => {

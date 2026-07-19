@@ -1,6 +1,7 @@
 const RESEND_URL = "https://api.resend.com/emails";
 
-async function sendReportEmail({ to, subject, textBody, pngBuffer, filename }) {
+async function sendReportEmail({ to, subject, textBody, pngBuffer, attachmentBuffer, filename }) {
+  const fileBuffer = attachmentBuffer || pngBuffer;
   if (!process.env.RESEND_API_KEY) {
     throw new Error("RESEND_API_KEY is not set — add it to backend/.env (see README).");
   }
@@ -24,7 +25,7 @@ async function sendReportEmail({ to, subject, textBody, pngBuffer, filename }) {
       to,
       subject,
       html,
-      attachments: [{ filename, content: pngBuffer.toString("base64") }]
+      attachments: [{ filename, content: fileBuffer.toString("base64") }]
     })
   });
 

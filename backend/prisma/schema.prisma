@@ -30,6 +30,7 @@ model LOB {
   users        User[]
   requirements Requirement[]
   deliveries   Delivery[]
+  delayUpdates DelayUpdate[]
   reports      DailyReport[]
 }
 
@@ -45,6 +46,7 @@ model User {
 
   requirements Requirement[]
   deliveries   Delivery[]
+  delayUpdates DelayUpdate[]
 }
 
 model Requirement {
@@ -79,8 +81,31 @@ model Delivery {
   @@index([lobId, date])
 }
 
+// Tracks whether an already-scheduled deliverable is on track, WIP, or has
+// slipped — typically because an urgent same-day requirement bumped it.
+// status is a free-form string (not a DB enum) so it can hold multi-word
+// values like "At Risk", mirroring how Delivery.type is modeled below.
+model DelayUpdate {
+  id              String   @id @default(cuid())
+  date            String // YYYY-MM-DD, the business day this update was logged
+  module          String?
+  deliverable     String // name of the task/deliverable this update is about
+  originalDueDate String? // YYYY-MM-DD, the originally committed date
+  revisedDueDate  String? // YYYY-MM-DD, the new expected date (if delayed)
+  status          String   @default("WIP") // WIP | On Track | Delayed | At Risk | Completed
+  reason          String? // why it slipped, e.g. the urgent requirement that bumped it
+  lobId           String
+  lob             LOB      @relation(fields: [lobId], references: [id])
+  createdById     String
+  createdBy       User     @relation(fields: [createdById], references: [id])
+  createdAt       DateTime @default(now())
+
+  @@index([lobId, date])
+}
+
 // One cached/generated snapshot per LOB per day — regenerated on demand,
-// holds the rendered PNG path and the wa.me share link built from it.
+// holds the rendered PNG path (WhatsApp preview) and PDF path (downloadable/
+// emailed document) plus the wa.me share link built from them.
 model DailyReport {
   id           String   @id @default(cuid())
   date         String
@@ -88,12 +113,15 @@ model DailyReport {
   lob          LOB      @relation(fields: [lobId], references: [id])
   imagePath    String
   imageUrl     String
+  pdfPath      String?
+  pdfUrl       String?
   shareLink    String
   requirements Int
   deliveries   Int
   modules      Int
   bugFixes     Int
   features     Int
+  delayFlags   Int      @default(0)
   generatedAt  DateTime @default(now())
 
   @@unique([lobId, date])

@@ -83,6 +83,16 @@ export function SparkIcon({ color = "currentColor" }) {
   );
 }
 
+export function ClockAlertIcon({ color = "currentColor" }) {
+  return (
+    <Svg size={18}>
+      <circle cx="12" cy="13" r="8" stroke={color} strokeWidth="1.6" />
+      <path d="M12 9v4l3 2" stroke={color} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M9 2h6" stroke={color} strokeWidth="1.6" strokeLinecap="round" />
+    </Svg>
+  );
+}
+
 export function CopyIcon() {
   return (
     <Svg size={15}>

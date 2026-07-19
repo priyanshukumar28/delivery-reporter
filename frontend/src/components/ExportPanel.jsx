@@ -13,19 +13,19 @@ function MailIcon() {
   );
 }
 
-export default function ExportPanel({ date, requirements, deliveries, generating, onGenerate, onClearToday }) {
+export default function ExportPanel({ date, requirements, deliveries, delays = [], generating, onGenerate, onClearToday }) {
   const [copied, setCopied] = useState("");
   const [sendingEmail, setSendingEmail] = useState(false);
 
   async function copy(mode) {
-    const text = buildMessageText({ date, requirements, deliveries }, mode);
+    const text = buildMessageText({ date, requirements, deliveries, delays }, mode);
     await navigator.clipboard.writeText(text);
     setCopied(mode);
     setTimeout(() => setCopied(""), 1800);
   }
 
   function downloadTxt() {
-    const text = buildMessageText({ date, requirements, deliveries }, "email");
+    const text = buildMessageText({ date, requirements, deliveries, delays }, "email");
     const blob = new Blob([text], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -35,9 +35,9 @@ export default function ExportPanel({ date, requirements, deliveries, generating
     URL.revokeObjectURL(url);
   }
 
-  async function downloadPng() {
+  async function downloadPdf() {
     const current = await onGenerate();
-    if (current?.imageUrl) window.open(current.imageUrl, "_blank");
+    if (current?.pdfUrl) window.open(current.pdfUrl, "_blank");
   }
 
   function print() {
@@ -76,8 +76,8 @@ export default function ExportPanel({ date, requirements, deliveries, generating
         <button className={styles.exportGhost} onClick={downloadTxt}>
           <DownloadIcon /> Download as TXT
         </button>
-        <button className={styles.exportGhost} onClick={downloadPng} disabled={generating}>
-          <DownloadIcon /> {generating ? "Generating..." : "Download as PNG"}
+        <button className={styles.exportGhost} onClick={downloadPdf} disabled={generating}>
+          <DownloadIcon /> {generating ? "Generating..." : "Download as PDF"}
         </button>
         <button className={styles.exportGhost} onClick={print}>
           <PrintIcon /> Print

@@ -4,6 +4,7 @@ import { useAuth } from "../api/AuthContext.jsx";
 import TopBar from "../components/TopBar.jsx";
 import MetricStrip from "../components/MetricStrip.jsx";
 import EntryPanel from "../components/EntryPanel.jsx";
+import DelayPanel from "../components/DelayPanel.jsx";
 import MessagePreview from "../components/MessagePreview.jsx";
 import ExportPanel from "../components/ExportPanel.jsx";
 import HistoryPanel from "../components/HistoryPanel.jsx";
@@ -25,18 +26,21 @@ export default function AnalystDashboard() {
   const [date, setDate] = useState(todayKey());
   const [requirements, setRequirements] = useState([]);
   const [deliveries, setDeliveries] = useState([]);
+  const [delays, setDelays] = useState([]);
   const [history, setHistory] = useState([]);
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
 
   const load = useCallback(async () => {
-    const [reqRes, delRes] = await Promise.all([
+    const [reqRes, delRes, delayRes] = await Promise.all([
       api.get("/requirements", { params: { date } }),
-      api.get("/deliveries", { params: { date } })
+      api.get("/deliveries", { params: { date } }),
+      api.get("/delays", { params: { date } })
     ]);
     setRequirements(reqRes.data);
     setDeliveries(delRes.data);
+    setDelays(delayRes.data);
   }, [date]);
 
   const loadHistory = useCallback(async () => {
@@ -89,6 +93,20 @@ export default function AnalystDashboard() {
     });
   }
 
+  async function addDelay(payload) {
+    await withSaving(async () => {
+      await api.post("/delays", { ...payload, date });
+      await load();
+    });
+  }
+
+  async function deleteDelay(id) {
+    await withSaving(async () => {
+      await api.delete(`/delays/${id}`);
+      await load();
+    });
+  }
+
   async function generateReport() {
     setGenerating(true);
     try {
@@ -106,7 +124,8 @@ export default function AnalystDashboard() {
     await withSaving(async () => {
       await Promise.all([
         ...requirements.map(r => api.delete(`/requirements/${r.id}`)),
-        ...deliveries.map(d => api.delete(`/deliveries/${d.id}`))
+        ...deliveries.map(d => api.delete(`/deliveries/${d.id}`)),
+        ...delays.map(d => api.delete(`/delays/${d.id}`))
       ]);
       await load();
     });
@@ -175,14 +194,22 @@ export default function AnalystDashboard() {
           />
         </div>
 
-        <MetricStrip requirements={requirements} deliveries={deliveries} />
+        <DelayPanel
+          items={delays}
+          onAdd={addDelay}
+          onDelete={deleteDelay}
+          filter={search}
+        />
 
-        <MessagePreview date={date} requirements={requirements} deliveries={deliveries} />
+        <MetricStrip requirements={requirements} deliveries={deliveries} delays={delays} />
+
+        <MessagePreview date={date} requirements={requirements} deliveries={deliveries} delays={delays} />
 
         <ExportPanel
           date={date}
           requirements={requirements}
           deliveries={deliveries}
+          delays={delays}
           generating={generating}
           onGenerate={generateReport}
           onClearToday={clearToday}
