@@ -7,14 +7,21 @@ const router = express.Router();
 router.use(requireAuth);
 
 const STATUS_OPTIONS = ["WIP", "On Track", "Delayed", "At Risk", "Completed"];
+const CATEGORY_OPTIONS = ["Change Request", "Production Movement", "Maintenance", "Development", "Bug Fix"];
 const dateOrEmpty = z.union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/), z.literal("")]).optional();
 
 const delaySchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   module: z.string().optional(),
   deliverable: z.string().min(1),
+  category: z.enum(CATEGORY_OPTIONS).default("Development"),
+  receivedFrom: z.string().optional(),
+  receivedDate: dateOrEmpty,
   originalDueDate: dateOrEmpty,
   revisedDueDate: dateOrEmpty,
+  approvalTaken: z.boolean().default(false),
+  approvedBy: z.string().optional(),
+  approvedDate: dateOrEmpty,
   status: z.enum(STATUS_OPTIONS).default("WIP"),
   reason: z.string().optional()
 });
@@ -30,8 +37,17 @@ function normalize(data) {
   const out = { ...data };
   if ("originalDueDate" in out) out.originalDueDate = out.originalDueDate || null;
   if ("revisedDueDate" in out) out.revisedDueDate = out.revisedDueDate || null;
+  if ("receivedDate" in out) out.receivedDate = out.receivedDate || null;
+  if ("approvedDate" in out) out.approvedDate = out.approvedDate || null;
   if ("module" in out) out.module = out.module || null;
   if ("reason" in out) out.reason = out.reason || null;
+  if ("receivedFrom" in out) out.receivedFrom = out.receivedFrom || null;
+  if ("approvedBy" in out) out.approvedBy = out.approvedBy || null;
+  // Approval fields only make sense when approval was actually taken.
+  if (out.approvalTaken === false) {
+    out.approvedBy = null;
+    out.approvedDate = null;
+  }
   return out;
 }
 

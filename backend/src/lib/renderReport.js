@@ -16,15 +16,17 @@ const COLOR = {
   purple: "#7C3AED",
   purpleSoft: "#EDE9FE",
   orange: "#EA580C",
-  orangeSoft: "#FFEDD5"
+  orangeSoft: "#FFEDD5",
+  teal: "#0E7C66",
+  tealSoft: "#E3F4EF"
 };
 
-const TYPE_COLOR = {
-  Feature: { fg: COLOR.blue, bg: COLOR.blueSoft },
-  "Bug Fix": { fg: COLOR.orange, bg: COLOR.orangeSoft },
-  Enhancement: { fg: COLOR.green, bg: COLOR.greenSoft },
-  Configuration: { fg: COLOR.muted, bg: "#EEEEEE" },
-  Support: { fg: COLOR.muted, bg: "#EEEEEE" }
+const CATEGORY_COLOR = {
+  "Change Request": { fg: COLOR.blue, bg: COLOR.blueSoft },
+  "Production Movement": { fg: COLOR.teal, bg: COLOR.tealSoft },
+  Maintenance: { fg: COLOR.muted, bg: "#EEEEEE" },
+  Development: { fg: COLOR.purple, bg: COLOR.purpleSoft },
+  "Bug Fix": { fg: COLOR.orange, bg: COLOR.orangeSoft }
 };
 
 const PRIORITY_COLOR = {
@@ -280,14 +282,14 @@ function formatWeekday(dateStr) {
 
 function statTiles(requirements, deliveries) {
   const modules = new Set([...requirements, ...deliveries].map(i => i.module).filter(Boolean)).size;
-  const bugFixes = deliveries.filter(d => d.type === "Bug Fix").length;
-  const features = deliveries.filter(d => d.type === "Feature").length;
+  const bugFixes = deliveries.filter(d => d.category === "Bug Fix").length;
+  const devItems = deliveries.filter(d => d.category === "Development").length;
   return [
     { letter: "R", icon: null, value: requirements.length, label: ["Requirements", "Received"], fg: COLOR.blue, bg: COLOR.blueSoft },
     { letter: null, icon: "check", value: deliveries.length, label: ["Deliveries", "Completed"], fg: COLOR.green, bg: COLOR.greenSoft },
     { letter: "M", icon: null, value: modules, label: ["Modules", "Worked On"], fg: COLOR.purple, bg: COLOR.purpleSoft },
     { letter: "B", icon: null, value: bugFixes, label: ["Bug Fixes", "Delivered"], fg: COLOR.orange, bg: COLOR.orangeSoft },
-    { letter: "F", icon: null, value: features, label: ["Features", "Delivered"], fg: COLOR.blue, bg: COLOR.blueSoft }
+    { letter: "D", icon: null, value: devItems, label: ["Development", "Items"], fg: COLOR.blue, bg: COLOR.blueSoft }
   ];
 }
 
@@ -302,7 +304,8 @@ function drawBadgeIcon(ctx, tile, cx, cy, r) {
 
 /**
  * Renders the WhatsApp-shareable daily delivery summary card.
- * data: { lobName, date, requirements: [{description, priority, module, requestedBy}], deliveries: [{description, type, module, remarks}] }
+ * data: { lobName, date, requirements: [{description, priority, category, module, requestedBy, receivedFrom, receivedDate}],
+ *         deliveries: [{description, category, module, remarks, receivedFrom, receivedDate, closedDate}] }
  */
 function renderDailyLedger(data) {
   const W = 1024;
@@ -317,7 +320,7 @@ function renderDailyLedger(data) {
   const statGap = 16;
   const statW = (contentW - statGap * 4) / 5;
 
-  const rowH = 80;
+  const rowH = 92;
   const EMPTY_PANEL_H = 300;
   const panel1Y = statY + statH + gap;
   const panel1H = Math.max(EMPTY_PANEL_H, 118 + Math.max(data.requirements.length, data.deliveries.length, 1) * rowH);
@@ -386,7 +389,7 @@ function renderDailyLedger(data) {
   });
 
   // ---- Requirements / Deliveries panels ----
-  function drawEntryPanel(x, title, accent, accentBg, items, iconFn, emptyIconFn, emptyText, renderTagFn) {
+  function drawEntryPanel(x, title, accent, accentBg, items, iconFn, emptyIconFn, emptyText, renderTagFn, metaFn) {
     ctx.fillStyle = COLOR.card;
     roundRect(ctx, x, panel1Y, panelW, panel1H, 14);
     ctx.fill();
@@ -424,7 +427,7 @@ function renderDailyLedger(data) {
       text(ctx, item.module, x + 54 + tagW + 10, lineBaseline, { size: 13, weight: 700, color: COLOR.ink });
       const lines = wrapLines(ctx, item.description, panelW - 48, 14, 600, "sans-serif");
       text(ctx, lines[0] || "", x + 24, rowTop + 42, { size: 14, weight: 600, color: COLOR.ink });
-      const meta = item.requestedBy ? `Requested by ${item.requestedBy}` : item.remarks ? item.remarks : "";
+      const meta = metaFn(item);
       if (meta) text(ctx, meta, x + 24, rowTop + 62, { size: 12, weight: 500, color: COLOR.muted });
       if (index < items.length - 1) {
         ctx.strokeStyle = COLOR.line;
@@ -437,15 +440,34 @@ function renderDailyLedger(data) {
     });
   }
 
+  function requirementMeta(item) {
+    const bits = [];
+    if (item.requestedBy) bits.push(`Requested by ${item.requestedBy}`);
+    if (item.receivedFrom) bits.push(`Received from ${item.receivedFrom}`);
+    if (item.receivedDate) bits.push(`Recd ${item.receivedDate}`);
+    return bits.join("  \u00B7  ");
+  }
+
+  function deliveryMeta(item) {
+    const bits = [];
+    if (item.receivedFrom) bits.push(`From ${item.receivedFrom}`);
+    if (item.receivedDate) bits.push(`Recd ${item.receivedDate}`);
+    if (item.closedDate) bits.push(`Closed ${item.closedDate}`);
+    if (item.remarks) bits.push(item.remarks);
+    return bits.join("  \u00B7  ");
+  }
+
   drawEntryPanel(
     PAD, "Requirements Received", COLOR.blue, COLOR.blueSoft,
     data.requirements, drawDownloadIcon, drawClipboardIcon, "No requirements received.",
-    item => ({ label: item.priority, color: PRIORITY_COLOR[item.priority] || PRIORITY_COLOR.Medium })
+    item => ({ label: item.priority, color: PRIORITY_COLOR[item.priority] || PRIORITY_COLOR.Medium }),
+    requirementMeta
   );
   drawEntryPanel(
     PAD + panelW + gap, "Deliveries Completed", COLOR.green, COLOR.greenSoft,
     data.deliveries, drawCheck, drawBoxWithCheck, "No deliveries completed.",
-    item => ({ label: item.type, color: TYPE_COLOR[item.type] || TYPE_COLOR.Feature })
+    item => ({ label: item.category, color: CATEGORY_COLOR[item.category] || CATEGORY_COLOR.Development }),
+    deliveryMeta
   );
 
   // ---- Summary Overview panel ----

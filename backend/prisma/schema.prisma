@@ -50,33 +50,38 @@ model User {
 }
 
 model Requirement {
-  id          String   @id @default(cuid())
-  date        String // YYYY-MM-DD, the business day this entry belongs to
-  description String
-  requestedBy String?
-  priority    Priority @default(Medium)
-  module      String?
-  lobId       String
-  lob         LOB      @relation(fields: [lobId], references: [id])
-  createdById String
-  createdBy   User     @relation(fields: [createdById], references: [id])
-  createdAt   DateTime @default(now())
+  id           String   @id @default(cuid())
+  date         String // YYYY-MM-DD, the business day this entry belongs to
+  description  String
+  receivedFrom String? // who/which team the requirement was received from
+  receivedDate String? // YYYY-MM-DD, when the requirement was received
+  category     String   @default("Development") // Change Request | Production Movement | Maintenance | Development | Bug Fix
+  priority     Priority @default(Medium)
+  module       String?
+  lobId        String
+  lob          LOB      @relation(fields: [lobId], references: [id])
+  createdById  String
+  createdBy    User     @relation(fields: [createdById], references: [id])
+  createdAt    DateTime @default(now())
 
   @@index([lobId, date])
 }
 
 model Delivery {
-  id          String   @id @default(cuid())
-  date        String
-  description String
-  remarks     String?
-  type        String   @default("Feature")
-  module      String?
-  lobId       String
-  lob         LOB      @relation(fields: [lobId], references: [id])
-  createdById String
-  createdBy   User     @relation(fields: [createdById], references: [id])
-  createdAt   DateTime @default(now())
+  id           String   @id @default(cuid())
+  date         String
+  description  String
+  remarks      String?
+  category     String   @default("Development") // Change Request | Production Movement | Maintenance | Development | Bug Fix
+  receivedFrom String? // who/which team the underlying requirement was received from
+  receivedDate String? // YYYY-MM-DD, when the requirement was received
+  closedDate   String? // YYYY-MM-DD, when the delivery actually happened/closed
+  module       String?
+  lobId        String
+  lob          LOB      @relation(fields: [lobId], references: [id])
+  createdById  String
+  createdBy    User     @relation(fields: [createdById], references: [id])
+  createdAt    DateTime @default(now())
 
   @@index([lobId, date])
 }
@@ -84,14 +89,20 @@ model Delivery {
 // Tracks whether an already-scheduled deliverable is on track, WIP, or has
 // slipped — typically because an urgent same-day requirement bumped it.
 // status is a free-form string (not a DB enum) so it can hold multi-word
-// values like "At Risk", mirroring how Delivery.type is modeled below.
+// values like "At Risk", mirroring how Delivery.category is modeled below.
 model DelayUpdate {
   id              String   @id @default(cuid())
   date            String // YYYY-MM-DD, the business day this update was logged
   module          String?
   deliverable     String // name of the task/deliverable this update is about
+  category        String   @default("Development") // Change Request | Production Movement | Maintenance | Development | Bug Fix
+  receivedFrom    String? // who/which team the underlying requirement was received from
+  receivedDate    String? // YYYY-MM-DD, when the requirement was received
   originalDueDate String? // YYYY-MM-DD, the originally committed date
   revisedDueDate  String? // YYYY-MM-DD, the new expected date (if delayed)
+  approvalTaken   Boolean  @default(false) // whether approval for the revised date was taken
+  approvedBy      String? // who approved the revised date, if approvalTaken
+  approvedDate    String? // YYYY-MM-DD, when the approval was taken, if approvalTaken
   status          String   @default("WIP") // WIP | On Track | Delayed | At Risk | Completed
   reason          String? // why it slipped, e.g. the urgent requirement that bumped it
   lobId           String

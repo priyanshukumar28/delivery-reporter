@@ -6,11 +6,16 @@ const { requireAuth, requireRole } = require("../middleware/auth");
 const router = express.Router();
 router.use(requireAuth);
 
+const CATEGORY_OPTIONS = ["Change Request", "Production Movement", "Maintenance", "Development", "Bug Fix"];
+const dateOrEmpty = z.union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/), z.literal("")]).optional();
+
 const requirementSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   module: z.string().min(1),
   description: z.string().min(1),
-  requestedBy: z.string().optional(),
+  receivedFrom: z.string().optional(),
+  receivedDate: dateOrEmpty,
+  category: z.enum(CATEGORY_OPTIONS).default("Development"),
   priority: z.enum(["Low", "Medium", "High", "Critical"]).default("Medium")
 });
 
@@ -18,7 +23,10 @@ const deliverySchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   module: z.string().min(1),
   description: z.string().min(1),
-  type: z.enum(["Feature", "Enhancement", "Bug Fix", "Configuration", "Support"]).default("Feature"),
+  category: z.enum(CATEGORY_OPTIONS).default("Development"),
+  receivedFrom: z.string().optional(),
+  receivedDate: dateOrEmpty,
+  closedDate: dateOrEmpty,
   remarks: z.string().optional()
 });
 
@@ -27,6 +35,14 @@ const deliverySchema = z.object({
 function resolveLobId(req) {
   if (req.user.role === "SUPER_ADMIN") return req.query.lobId || req.body.lobId || null;
   return req.user.lobId;
+}
+
+// Empty-string date inputs from <input type="date"> must become null, not "".
+function normalize(data) {
+  const out = { ...data };
+  if ("receivedDate" in out) out.receivedDate = out.receivedDate || null;
+  if ("closedDate" in out) out.closedDate = out.closedDate || null;
+  return out;
 }
 
 router.get("/requirements", async (req, res) => {
@@ -50,7 +66,7 @@ router.post("/requirements", requireRole("ANALYST", "SUPER_ADMIN"), async (req, 
   if (!lobId) return res.status(400).json({ error: "lobId is required." });
 
   const item = await prisma.requirement.create({
-    data: { ...parsed.data, lobId, createdById: req.user.id }
+    data: { ...normalize(parsed.data), lobId, createdById: req.user.id }
   });
   res.status(201).json(item);
 });
@@ -65,7 +81,7 @@ router.put("/requirements/:id", requireRole("ANALYST", "SUPER_ADMIN"), async (re
     return res.status(403).json({ error: "Not permitted." });
   }
 
-  const item = await prisma.requirement.update({ where: { id: req.params.id }, data: parsed.data });
+  const item = await prisma.requirement.update({ where: { id: req.params.id }, data: normalize(parsed.data) });
   res.json(item);
 });
 
@@ -101,7 +117,7 @@ router.post("/deliveries", requireRole("ANALYST", "SUPER_ADMIN"), async (req, re
   if (!lobId) return res.status(400).json({ error: "lobId is required." });
 
   const item = await prisma.delivery.create({
-    data: { ...parsed.data, lobId, createdById: req.user.id }
+    data: { ...normalize(parsed.data), lobId, createdById: req.user.id }
   });
   res.status(201).json(item);
 });
@@ -116,7 +132,7 @@ router.put("/deliveries/:id", requireRole("ANALYST", "SUPER_ADMIN"), async (req,
     return res.status(403).json({ error: "Not permitted." });
   }
 
-  const item = await prisma.delivery.update({ where: { id: req.params.id }, data: parsed.data });
+  const item = await prisma.delivery.update({ where: { id: req.params.id }, data: normalize(parsed.data) });
   res.json(item);
 });
 

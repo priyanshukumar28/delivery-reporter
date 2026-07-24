@@ -7,38 +7,68 @@ const TAG_CLASS = {
   Medium: "tagIndigo",
   High: "tagCrimson",
   Critical: "tagCrimson",
-  Feature: "tagIndigo",
-  "Bug Fix": "tagCrimson",
-  Enhancement: "tagTeal",
-  Configuration: "tagMuted",
-  Support: "tagMuted"
+  "Change Request": "tagIndigo",
+  "Production Movement": "tagTeal",
+  Maintenance: "tagMuted",
+  Development: "tagIndigo",
+  "Bug Fix": "tagCrimson"
 };
 
 const PRIORITY_OPTIONS = ["Low", "Medium", "High", "Critical"];
-const TYPE_OPTIONS = ["Feature", "Enhancement", "Bug Fix", "Configuration", "Support"];
+const CATEGORY_OPTIONS = ["Change Request", "Production Movement", "Maintenance", "Development", "Bug Fix"];
+
+function formatShortDate(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(`${dateStr}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return dateStr;
+  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
+}
 
 export default function EntryPanel({ title, kind, items, onAdd, onDelete, emptyText, canEdit, filter = "" }) {
   const isRequirement = kind === "requirement";
   const [module, setModule] = useState("");
-  const [side, setSide] = useState(isRequirement ? "" : TYPE_OPTIONS[0]); // requestedBy or type
+  const [remarks, setRemarks] = useState(""); // delivery only
   const [description, setDescription] = useState("");
-  const [tail, setTail] = useState(isRequirement ? PRIORITY_OPTIONS[1] : ""); // priority or remarks
+  const [category, setCategory] = useState(CATEGORY_OPTIONS[3]); // Development
+  const [priority, setPriority] = useState(PRIORITY_OPTIONS[1]); // requirement only
+  const [receivedFrom, setReceivedFrom] = useState("");
+  const [receivedDate, setReceivedDate] = useState("");
+  const [closedDate, setClosedDate] = useState(""); // delivery only
   const [sortAsc, setSortAsc] = useState(null);
 
   function clearForm() {
     setModule("");
-    setSide(isRequirement ? "" : TYPE_OPTIONS[0]);
+    setRemarks("");
     setDescription("");
-    setTail(isRequirement ? PRIORITY_OPTIONS[1] : "");
+    setCategory(CATEGORY_OPTIONS[3]);
+    setPriority(PRIORITY_OPTIONS[1]);
+    setReceivedFrom("");
+    setReceivedDate("");
+    setClosedDate("");
   }
 
   function handleSubmit(e) {
     e.preventDefault();
     if (!module.trim() || !description.trim()) return;
     if (isRequirement) {
-      onAdd({ module: module.trim(), description: description.trim(), requestedBy: side.trim() || undefined, priority: tail });
+      onAdd({
+        module: module.trim(),
+        description: description.trim(),
+        category,
+        priority,
+        receivedFrom: receivedFrom.trim() || undefined,
+        receivedDate: receivedDate || undefined
+      });
     } else {
-      onAdd({ module: module.trim(), description: description.trim(), type: side, remarks: tail.trim() || undefined });
+      onAdd({
+        module: module.trim(),
+        description: description.trim(),
+        category,
+        remarks: remarks.trim() || undefined,
+        receivedFrom: receivedFrom.trim() || undefined,
+        receivedDate: receivedDate || undefined,
+        closedDate: closedDate || undefined
+      });
     }
     clearForm();
   }
@@ -64,19 +94,12 @@ export default function EntryPanel({ title, kind, items, onAdd, onDelete, emptyT
               <label>Module Name</label>
               <input placeholder="e.g. Core API" value={module} onChange={e => setModule(e.target.value)} required />
             </div>
-            {isRequirement ? (
-              <div className={styles.entryField}>
-                <label>Requested By</label>
-                <input placeholder="e.g. Sales" value={side} onChange={e => setSide(e.target.value)} />
-              </div>
-            ) : (
-              <div className={styles.entryField}>
-                <label>Delivery Type</label>
-                <select value={side} onChange={e => setSide(e.target.value)}>
-                  {TYPE_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                </select>
-              </div>
-            )}
+            <div className={styles.entryField}>
+              <label>Category</label>
+              <select value={category} onChange={e => setCategory(e.target.value)}>
+                {CATEGORY_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+              </select>
+            </div>
           </div>
 
           <div className={styles.entryField}>
@@ -90,16 +113,39 @@ export default function EntryPanel({ title, kind, items, onAdd, onDelete, emptyT
             />
           </div>
 
-          <div className={styles.entryField}>
-            <label>{isRequirement ? "Priority" : "Remarks (optional)"}</label>
-            {isRequirement ? (
-              <select value={tail} onChange={e => setTail(e.target.value)}>
-                {PRIORITY_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-              </select>
-            ) : (
-              <input placeholder="Internal notes or ticket IDs..." value={tail} onChange={e => setTail(e.target.value)} />
-            )}
+          <div className={styles.entryFormRow}>
+            <div className={styles.entryField}>
+              <label>Requirement Received From</label>
+              <input placeholder="e.g. Sales / Client name" value={receivedFrom} onChange={e => setReceivedFrom(e.target.value)} />
+            </div>
+            <div className={styles.entryField}>
+              <label>Requirement Received Date</label>
+              <input type="date" value={receivedDate} onChange={e => setReceivedDate(e.target.value)} />
+            </div>
           </div>
+
+          {isRequirement ? (
+            <div className={styles.entryFormRow}>
+              <div className={styles.entryField}>
+                <label>Priority</label>
+                <select value={priority} onChange={e => setPriority(e.target.value)}>
+                  {PRIORITY_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                </select>
+              </div>
+              <div className={styles.entryField} />
+            </div>
+          ) : (
+            <div className={styles.entryFormRow}>
+              <div className={styles.entryField}>
+                <label>Closed Date</label>
+                <input type="date" value={closedDate} onChange={e => setClosedDate(e.target.value)} />
+              </div>
+              <div className={styles.entryField}>
+                <label>Remarks (optional)</label>
+                <input placeholder="Internal notes or ticket IDs..." value={remarks} onChange={e => setRemarks(e.target.value)} />
+              </div>
+            </div>
+          )}
 
           <div className={styles.entryFormActions}>
             <button className={styles.addBtn} type="submit">+ {isRequirement ? "Add Requirement" : "Add Delivery"}</button>
@@ -112,32 +158,38 @@ export default function EntryPanel({ title, kind, items, onAdd, onDelete, emptyT
         <div className={styles.tableHead}>
           <span>Module</span>
           <span>{isRequirement ? "Requirement" : "Delivery"}</span>
-          <span>{isRequirement ? "Requested By" : "Type"}</span>
-          <span>{isRequirement ? "Priority" : "Remarks"}</span>
+          <span>Category</span>
+          <span>{isRequirement ? "Priority" : "Closed Date"}</span>
           {canEdit && <span>Edit</span>}
         </div>
         {sorted.length === 0 && <div className={styles.empty}>{emptyText}</div>}
-        {sorted.map(item => (
-          <div className={styles.tableRow} key={item.id}>
-            <span className={styles.rowModule}>{item.module}</span>
-            <span className={styles.rowTitle}>{item.description}</span>
-            {isRequirement ? (
-              <span className={styles.rowMuted}>{item.requestedBy || "—"}</span>
-            ) : (
-              <span className={`${styles.tag} ${styles[TAG_CLASS[item.type] || "tagMuted"]}`}>{item.type}</span>
-            )}
-            {isRequirement ? (
-              <span className={`${styles.tag} ${styles[TAG_CLASS[item.priority] || "tagMuted"]}`}>{item.priority}</span>
-            ) : (
-              <span className={styles.rowRemarks}>{item.remarks || "—"}</span>
-            )}
-            {canEdit && (
-              <button className={styles.deleteBtn} onClick={() => onDelete(item.id)} title="Remove">
-                <CloseIcon />
-              </button>
-            )}
-          </div>
-        ))}
+        {sorted.map(item => {
+          const metaBits = [];
+          if (item.receivedFrom) metaBits.push(`Received from ${item.receivedFrom}`);
+          if (item.receivedDate) metaBits.push(`Received ${formatShortDate(item.receivedDate)}`);
+          if (!isRequirement && item.remarks) metaBits.push(item.remarks);
+
+          return (
+            <div className={styles.tableRow} key={item.id}>
+              <span className={styles.rowModule}>{item.module}</span>
+              <span className={styles.rowTitle}>
+                {item.description}
+                {metaBits.length > 0 && <span className={styles.rowMuted} style={{ display: "block", marginTop: 2 }}>{metaBits.join(" · ")}</span>}
+              </span>
+              <span className={`${styles.tag} ${styles[TAG_CLASS[item.category] || "tagMuted"]}`}>{item.category}</span>
+              {isRequirement ? (
+                <span className={`${styles.tag} ${styles[TAG_CLASS[item.priority] || "tagMuted"]}`}>{item.priority}</span>
+              ) : (
+                <span className={styles.rowMuted}>{formatShortDate(item.closedDate) || "—"}</span>
+              )}
+              {canEdit && (
+                <button className={styles.deleteBtn} onClick={() => onDelete(item.id)} title="Remove">
+                  <CloseIcon />
+                </button>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

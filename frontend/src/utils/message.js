@@ -6,8 +6,8 @@ function formatDateLong(dateStr) {
 export function buildMessageText({ date, requirements, deliveries, delays = [] }, mode = "whatsapp") {
   const bullet = mode === "email" ? "-" : "•";
   const modules = new Set([...requirements, ...deliveries].map(i => (i.module || "").toLowerCase()));
-  const bugs = deliveries.filter(d => d.type === "Bug Fix").length;
-  const features = deliveries.filter(d => d.type === "Feature").length;
+  const bugs = deliveries.filter(d => d.category === "Bug Fix").length;
+  const features = deliveries.filter(d => d.category === "Development").length;
   const flagged = delays.filter(d => d.status === "Delayed" || d.status === "At Risk").length;
 
   const lines = [];
@@ -17,7 +17,9 @@ export function buildMessageText({ date, requirements, deliveries, delays = [] }
     requirements.forEach((item, index) => {
       lines.push(`${index + 1}. ${item.module}`);
       lines.push(`   ${bullet} ${item.description}`);
-      if (item.requestedBy) lines.push(`   ${bullet} Requested By: ${item.requestedBy}`);
+      lines.push(`   ${bullet} Category: ${item.category}`);
+      if (item.receivedFrom) lines.push(`   ${bullet} Received From: ${item.receivedFrom}`);
+      if (item.receivedDate) lines.push(`   ${bullet} Received Date: ${item.receivedDate}`);
       lines.push("");
     });
   } else {
@@ -30,7 +32,10 @@ export function buildMessageText({ date, requirements, deliveries, delays = [] }
     deliveries.forEach((item, index) => {
       lines.push(`${index + 1}. ${item.module}`);
       lines.push(`   ${bullet} ${item.description}`);
-      lines.push(`   ${bullet} Type: ${item.type}`);
+      lines.push(`   ${bullet} Category: ${item.category}`);
+      if (item.receivedFrom) lines.push(`   ${bullet} Received From: ${item.receivedFrom}`);
+      if (item.receivedDate) lines.push(`   ${bullet} Received Date: ${item.receivedDate}`);
+      if (item.closedDate) lines.push(`   ${bullet} Closed Date: ${item.closedDate}`);
       if (item.remarks) lines.push(`   ${bullet} Remarks: ${item.remarks}`);
       lines.push("");
     });
@@ -43,12 +48,23 @@ export function buildMessageText({ date, requirements, deliveries, delays = [] }
   if (delays.length) {
     delays.forEach((item, index) => {
       const label = item.module ? `${item.deliverable} (${item.module})` : item.deliverable;
-      lines.push(`${index + 1}. ${label} [${item.status}]`);
+      lines.push(`${index + 1}. ${label} [${item.status}] — ${item.category}`);
+      if (item.receivedFrom || item.receivedDate) {
+        lines.push(`   ${bullet} Received: ${item.receivedFrom || "—"}${item.receivedDate ? ` on ${item.receivedDate}` : ""}`);
+      }
       if (item.originalDueDate || item.revisedDueDate) {
         const from = item.originalDueDate || "—";
         const to = item.revisedDueDate || "—";
         lines.push(`   ${bullet} Timeline: ${from} -> ${to}`);
       }
+      let approvalLine = "Not Taken";
+      if (item.approvalTaken) {
+        const bits = [];
+        if (item.approvedBy) bits.push(`by ${item.approvedBy}`);
+        if (item.approvedDate) bits.push(`on ${item.approvedDate}`);
+        approvalLine = bits.length ? `Taken (${bits.join(", ")})` : "Taken";
+      }
+      lines.push(`   ${bullet} Revised Date Approval: ${approvalLine}`);
       if (item.reason) lines.push(`   ${bullet} Reason: ${item.reason}`);
       lines.push("");
     });
@@ -62,7 +78,7 @@ export function buildMessageText({ date, requirements, deliveries, delays = [] }
     `${bullet} Deliveries Completed : ${deliveries.length}`,
     `${bullet} Modules Worked On : ${modules.size}`,
     `${bullet} Bug Fixes : ${bugs}`,
-    `${bullet} Features Delivered : ${features}`,
+    `${bullet} Development Items : ${features}`,
     `${bullet} Delayed / At Risk Items : ${flagged}`
   );
 

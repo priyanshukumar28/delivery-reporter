@@ -20,15 +20,17 @@ const COLOR = {
   amberSoft: "#FEF3C7",
   red: "#DC2626",
   redSoft: "#FEE2E2",
+  teal: "#0E7C66",
+  tealSoft: "#E3F4EF",
   muted2Soft: "#EEEEEE"
 };
 
-const TYPE_COLOR = {
-  Feature: { fg: COLOR.blue, bg: COLOR.blueSoft },
-  "Bug Fix": { fg: COLOR.orange, bg: COLOR.orangeSoft },
-  Enhancement: { fg: COLOR.green, bg: COLOR.greenSoft },
-  Configuration: { fg: COLOR.muted, bg: COLOR.muted2Soft },
-  Support: { fg: COLOR.muted, bg: COLOR.muted2Soft }
+const CATEGORY_COLOR = {
+  "Change Request": { fg: COLOR.blue, bg: COLOR.blueSoft },
+  "Production Movement": { fg: COLOR.teal, bg: COLOR.tealSoft },
+  Maintenance: { fg: COLOR.muted, bg: COLOR.muted2Soft },
+  Development: { fg: COLOR.purple, bg: COLOR.purpleSoft },
+  "Bug Fix": { fg: COLOR.orange, bg: COLOR.orangeSoft }
 };
 
 const PRIORITY_COLOR = {
@@ -52,6 +54,7 @@ const MARGIN = 40;
 const CONTENT_W = PAGE_W - MARGIN * 2;
 
 function formatDateLong(dateStr) {
+  if (!dateStr) return null;
   const d = new Date(`${dateStr}T00:00:00`);
   return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 }
@@ -99,8 +102,8 @@ function renderDailyLedgerPdf(data) {
   });
 
   const modules = [...new Set([...data.requirements, ...data.deliveries].map(i => i.module).filter(Boolean))];
-  const bugFixes = data.deliveries.filter(d => d.type === "Bug Fix").length;
-  const features = data.deliveries.filter(d => d.type === "Feature").length;
+  const bugFixes = data.deliveries.filter(d => d.category === "Bug Fix").length;
+  const devItems = data.deliveries.filter(d => d.category === "Development").length;
   const delays = data.delays || [];
   const flagged = delays.filter(d => d.status === "Delayed" || d.status === "At Risk").length;
 
@@ -118,7 +121,7 @@ function renderDailyLedgerPdf(data) {
     { value: data.deliveries.length, label: "Deliveries Completed", fg: COLOR.green, bg: COLOR.greenSoft },
     { value: modules.length, label: "Modules Worked On", fg: COLOR.purple, bg: COLOR.purpleSoft },
     { value: bugFixes, label: "Bug Fixes", fg: COLOR.orange, bg: COLOR.orangeSoft },
-    { value: features, label: "Features Delivered", fg: COLOR.blue, bg: COLOR.blueSoft },
+    { value: devItems, label: "Development Items", fg: COLOR.blue, bg: COLOR.blueSoft },
     { value: flagged, label: "Delayed / At Risk", fg: flagged ? COLOR.red : COLOR.muted, bg: flagged ? COLOR.redSoft : COLOR.muted2Soft }
   ];
   ensureSpace(doc, 62);
@@ -139,14 +142,21 @@ function renderDailyLedgerPdf(data) {
     emptyNote(doc, "No requirements received.", MARGIN, CONTENT_W);
   } else {
     data.requirements.forEach((item, index) => {
-      ensureSpace(doc, 40);
+      ensureSpace(doc, 46);
       const rowY = doc.y;
       const tagW = pill(doc, item.priority, MARGIN, rowY, PRIORITY_COLOR[item.priority] || PRIORITY_COLOR.Medium);
-      doc.fillColor(COLOR.ink).font("Helvetica-Bold").fontSize(10).text(`${index + 1}. ${item.module}`, MARGIN + tagW + 8, rowY + 3, { width: CONTENT_W - tagW - 8 });
+      const catW = pill(doc, item.category, MARGIN + tagW + 6, rowY, CATEGORY_COLOR[item.category] || CATEGORY_COLOR.Development);
+      const labelX = MARGIN + tagW + catW + 14;
+      doc.fillColor(COLOR.ink).font("Helvetica-Bold").fontSize(10).text(`${index + 1}. ${item.module}`, labelX, rowY + 3, { width: CONTENT_W - tagW - catW - 14 });
       doc.y = Math.max(doc.y, rowY + 20) + 6;
       doc.font("Helvetica").fontSize(10).fillColor(COLOR.ink).text(item.description, MARGIN, doc.y, { width: CONTENT_W });
-      if (item.requestedBy) {
-        doc.font("Helvetica-Oblique").fontSize(9).fillColor(COLOR.muted).text(`Requested by ${item.requestedBy}`, MARGIN, doc.y + 2, { width: CONTENT_W });
+
+      const metaBits = [];
+      if (item.requestedBy) metaBits.push(`Requested by ${item.requestedBy}`);
+      if (item.receivedFrom) metaBits.push(`Received from ${item.receivedFrom}`);
+      if (item.receivedDate) metaBits.push(`Received ${formatDateLong(item.receivedDate)}`);
+      if (metaBits.length) {
+        doc.font("Helvetica-Oblique").fontSize(9).fillColor(COLOR.muted).text(metaBits.join("   |   "), MARGIN, doc.y + 2, { width: CONTENT_W });
       }
       doc.moveDown(0.7);
       const ruleY = doc.y;
@@ -162,14 +172,20 @@ function renderDailyLedgerPdf(data) {
     emptyNote(doc, "No deliveries completed.", MARGIN, CONTENT_W);
   } else {
     data.deliveries.forEach((item, index) => {
-      ensureSpace(doc, 40);
+      ensureSpace(doc, 46);
       const rowY = doc.y;
-      const tagW = pill(doc, item.type, MARGIN, rowY, TYPE_COLOR[item.type] || TYPE_COLOR.Feature);
+      const tagW = pill(doc, item.category, MARGIN, rowY, CATEGORY_COLOR[item.category] || CATEGORY_COLOR.Development);
       doc.fillColor(COLOR.ink).font("Helvetica-Bold").fontSize(10).text(`${index + 1}. ${item.module}`, MARGIN + tagW + 8, rowY + 3, { width: CONTENT_W - tagW - 8 });
       doc.y = Math.max(doc.y, rowY + 20) + 6;
       doc.font("Helvetica").fontSize(10).fillColor(COLOR.ink).text(item.description, MARGIN, doc.y, { width: CONTENT_W });
-      if (item.remarks) {
-        doc.font("Helvetica-Oblique").fontSize(9).fillColor(COLOR.muted).text(item.remarks, MARGIN, doc.y + 2, { width: CONTENT_W });
+
+      const metaBits = [];
+      if (item.receivedFrom) metaBits.push(`Received from ${item.receivedFrom}`);
+      if (item.receivedDate) metaBits.push(`Received ${formatDateLong(item.receivedDate)}`);
+      if (item.closedDate) metaBits.push(`Closed ${formatDateLong(item.closedDate)}`);
+      if (item.remarks) metaBits.push(item.remarks);
+      if (metaBits.length) {
+        doc.font("Helvetica-Oblique").fontSize(9).fillColor(COLOR.muted).text(metaBits.join("   |   "), MARGIN, doc.y + 2, { width: CONTENT_W });
       }
       doc.moveDown(0.7);
       const ruleY = doc.y;
@@ -179,25 +195,39 @@ function renderDailyLedgerPdf(data) {
   }
   doc.moveDown(0.4);
 
-  // ---- Delivery Timeline & WIP Updates (new section) ----
+  // ---- Delivery Timeline & WIP Updates ----
   sectionHeader(doc, "Delivery Timeline & WIP Updates", COLOR.amber, MARGIN, CONTENT_W);
   if (!delays.length) {
     emptyNote(doc, "No timeline changes or WIP updates logged for this date.", MARGIN, CONTENT_W);
   } else {
     delays.forEach((item, index) => {
-      ensureSpace(doc, 54);
+      ensureSpace(doc, 64);
       const rowY = doc.y;
       const tagW = pill(doc, item.status, MARGIN, rowY, STATUS_COLOR[item.status] || STATUS_COLOR.WIP);
+      const catW = pill(doc, item.category, MARGIN + tagW + 6, rowY, CATEGORY_COLOR[item.category] || CATEGORY_COLOR.Development);
       const label = item.module ? `${index + 1}. ${item.deliverable} (${item.module})` : `${index + 1}. ${item.deliverable}`;
-      doc.fillColor(COLOR.ink).font("Helvetica-Bold").fontSize(10).text(label, MARGIN + tagW + 8, rowY + 3, { width: CONTENT_W - tagW - 8 });
+      doc.fillColor(COLOR.ink).font("Helvetica-Bold").fontSize(10).text(label, MARGIN + tagW + catW + 14, rowY + 3, { width: CONTENT_W - tagW - catW - 14 });
       doc.y = Math.max(doc.y, rowY + 20) + 6;
+
+      const receivedBits = [];
+      if (item.receivedFrom) receivedBits.push(`Received from ${item.receivedFrom}`);
+      if (item.receivedDate) receivedBits.push(`on ${formatDateLong(item.receivedDate)}`);
+      if (receivedBits.length) {
+        doc.font("Helvetica-Bold").fontSize(9).fillColor(COLOR.ink).text(receivedBits.join(" "), MARGIN, doc.y, { width: CONTENT_W });
+      }
 
       const dateBits = [];
       if (item.originalDueDate) dateBits.push(`Original due: ${formatDateLong(item.originalDueDate)}`);
       if (item.revisedDueDate) dateBits.push(`Revised to: ${formatDateLong(item.revisedDueDate)}`);
       if (dateBits.length) {
-        doc.font("Helvetica-Bold").fontSize(9).fillColor(COLOR.ink).text(dateBits.join("   ->   "), MARGIN, doc.y, { width: CONTENT_W });
+        doc.font("Helvetica-Bold").fontSize(9).fillColor(COLOR.ink).text(dateBits.join("   ->   "), MARGIN, doc.y + 2, { width: CONTENT_W });
       }
+
+      const approvalText = item.approvalTaken
+        ? `Revised date approval: Taken${item.approvedBy ? ` (by ${item.approvedBy}${item.approvedDate ? `, on ${formatDateLong(item.approvedDate)}` : ""})` : item.approvedDate ? ` (on ${formatDateLong(item.approvedDate)})` : ""}`
+        : "Revised date approval: Not Taken";
+      doc.font("Helvetica-Bold").fontSize(9).fillColor(item.approvalTaken ? COLOR.green : COLOR.red).text(approvalText, MARGIN, doc.y + 2, { width: CONTENT_W });
+
       if (item.reason) {
         doc.font("Helvetica").fontSize(9.5).fillColor(COLOR.muted).text(item.reason, MARGIN, doc.y + 2, { width: CONTENT_W });
       }
